@@ -1,0 +1,111 @@
+<html>
+
+
+<body>
+    <script>
+        const url = "https://api.hub.panter.cloud/graphql";
+        const RELOAD_INTERVAL = 1000
+        const HUB = "zürich-kraftwerk"
+
+        const query = `
+            {
+              hub(id: "${HUB}") {
+                _id
+                rooms {
+                  _id
+                  name
+                  currentBooking {
+                    _id
+                    bookerName
+                    title
+                    time {
+                      from
+                      to
+                    }
+                  }
+                nextBookingToday {
+                    bookerName
+                    title
+                    time {
+                      from
+                      to
+                    }
+                  }
+                 
+                }
+              }
+            }
+            
+            `
+        const opts = {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query })
+        };
+
+        const formatDate = dateString => {
+            return new Date(dateString).toLocaleTimeString()
+        }
+
+        const content = document.createElement("div");
+        const list = document.createElement("ul")
+        const emptyList = () => {
+            while (list.firstChild) {
+                list.removeChild(list.firstChild);
+            }
+
+        }
+        content.append(list)
+        document.body.append(content);
+
+        const loadData = () => {
+
+            fetch(url, opts)
+                .then(res => res.json())
+                .then(({ data }) => {
+                    console.log("data loaded")
+
+                    if (!data) {
+                        return
+                    }
+                    emptyList()
+
+                    try {
+                        const { rooms } = data.hub
+                        const rows = rooms.map(
+                            room => {
+                                const { currentBooking, nextBookingToday } = room
+                                const listElement = document.createElement("li")
+                                listElement.innerHTML = `
+                                    Room: ${room.name}<br />
+                                    ${currentBooking ? `
+                                        Current booking: ${currentBooking.title} - ${currentBooking.bookerName}<br />
+                                        From: ${formatDate(currentBooking.time.from)}<br />
+                                        To: ${formatDate(currentBooking.time.to)}<br />
+                                        ` : ""}<br />
+                                        ${nextBookingToday ? `
+                                        Next booking: ${nextBookingToday.title} - ${nextBookingToday.bookerName}<br />
+                                        From: ${formatDate(nextBookingToday.time.from)}<br />
+                                        To: ${formatDate(nextBookingToday.time.from)}<br />
+                                        ` : ""}<br />
+                                `
+                                list.append(listElement)
+                            }
+                        )
+
+                    } catch (e) {
+                        console.error(e)
+                    }
+                })
+                .catch(console.error);
+        }
+
+        loadData();
+        setInterval(loadData, RELOAD_INTERVAL)
+
+
+    </script>
+
+</body>
+
+</html>
